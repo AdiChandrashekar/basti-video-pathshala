@@ -104,6 +104,27 @@ h2 { font-size: 1.35rem; margin: .2rem 0 .6rem; font-weight: 800; }
 .pick small { display: block; color: var(--muted); }
 .pick[aria-pressed="true"] { background: var(--ink); color: var(--marigold); }
 .pick[aria-pressed="true"] small { color: inherit; opacity: .85; }
+.notice {
+  background: var(--fill-1); border: var(--border); border-radius: var(--radius); padding: .75rem 1rem;
+  margin: .4rem 0 1.1rem; box-shadow: var(--shadow-sm); max-width: 48rem;
+}
+.chosen {
+  background: var(--fill-3); border: var(--border); border-radius: var(--radius-card); padding: 1rem 1.1rem 1.1rem;
+  box-shadow: var(--shadow); margin: 0 0 1.4rem; max-width: 36rem;
+}
+.chosen small { font-weight: 700; }
+.chosen .cn { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; line-height: 1.15; margin-top: .15rem; }
+.chosen .cm { color: var(--muted); margin: .1rem 0 .9rem; }
+.btn.big { font-size: 1.15rem; padding: .75rem 1.4rem; width: 100%; justify-content: center; }
+.small { font-size: .9rem; margin: .8rem 0 .4rem; }
+.blocks { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .6rem; }
+.blocks .pick { padding: .5rem .8rem; min-height: 2.75rem; }
+.blocks.one .pick:not([aria-pressed="true"]) { display: none; }
+.blocks .pick { position: relative; padding-right: 2.2rem; }
+.blocks.one .pick[aria-pressed="true"]::after {
+  content: "✕"; position: absolute; right: .8rem; top: 50%; transform: translateY(-50%); font-size: 1.1rem;
+}
+[hidden] { display: none !important; }
 .schoolList { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); margin-top: .75rem; }
 .search {
   width: 100%; padding: .75rem 1rem; border: var(--border); border-radius: var(--radius); background: var(--card);

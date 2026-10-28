@@ -1,5 +1,5 @@
 // Network first, so teachers always get the latest page; the cached copy opens it when offline.
-var CACHE = 'vp-shell-v2';
+var CACHE = 'vp-shell-v3';
 var SHELL = ['./', 'index.html', 'style.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', function (e) {

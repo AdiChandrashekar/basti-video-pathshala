@@ -72,7 +72,7 @@
     $('#brand').innerHTML = esc(C.title) + '<span>&nbsp;· ' + esc(C.district) + '</span>';
     document.title = C.title;
     var b = $('#schoolBtn');
-    b.hidden = !school;
+    b.hidden = !confirmed();
     if (school) b.innerHTML = '<span>' + esc(school.name) + '</span><b>बदलें</b>';
     renderToday();
   }
@@ -84,7 +84,7 @@
 
   function renderToday() {
     var el = $('#today');
-    if (!school) { el.hidden = true; return; }
+    if (!confirmed()) { el.hidden = true; return; }
     var t = today();
     // The video playing right now is always in the outbox; only older unsent records count as pending.
     var pending = Object.keys(outbox).filter(function (k) { return !cur || k !== cur.s.id; }).length;
@@ -97,12 +97,22 @@
 
   $('#schoolBtn').addEventListener('click', function () { location.hash = '#/setup'; });
 
-  /* ---------- routing ---------- */
+  /* ---------- routing ----------
+   * Every visit starts at the school picker; a remembered school only needs one tap.
+   * The confirmation also lapses at midnight, for screens left open for days.
+   */
+
+  var confirmedOn = null;
+  var afterConfirm = '#/';
+  function confirmed() { return !!school && confirmedOn === localDate(Date.now()); }
 
   function route() {
     window.scrollTo(0, 0);
     var h = location.hash.replace(/^#\/?/, '').split('/');
-    if (!school || h[0] === 'setup') return viewSetup();
+    if (!confirmed() || h[0] === 'setup') {
+      afterConfirm = h[0] === 'p' ? location.hash : '#/';
+      return viewSetup();
+    }
     if (h[0] === 'p' && h[1]) return viewPlaylist(decodeURIComponent(h[1]));
     viewHome();
   }
@@ -115,64 +125,119 @@
 
   function viewSetup() {
     stopPlayer();
+    renderHeader();
     var v = $('#view');
     var data = get('schools');
+    var chosen = school;   // waits in the confirm card until the teacher taps "yes"
+    var block = '';        // block being browsed; '' searches the whole district
+    var typed = '';
+    var all = [];          // [udise, name, block, lowercase haystack]
+
     function draw(d) {
       if (!d || !d.b) { v.innerHTML = '<p class="muted center">विद्यालयों की सूची लोड हो रही है…</p>'; return; }
       var blocks = Object.keys(d.b).sort();
-      var cur = (school && d.b[school.block]) ? school.block : null;
+      all = [];
+      blocks.forEach(function (b) {
+        d.b[b].forEach(function (x) { all.push([x[0], x[1], b, (x[1] + ' ' + b + ' ' + x[0]).toLowerCase()]); });
+      });
       v.innerHTML =
-        '<h2>अपना ब्लॉक और विद्यालय चुनें</h2>' +
-        '<p class="muted">यह केवल एक बार चुनना है। इसी से रिकॉर्ड होगा कि आपके विद्यालय में कौन-से वीडियो चलाए गए।</p>' +
-        '<div class="picks" id="blocks">' + blocks.map(function (b) {
-          return '<button class="pick" data-b="' + esc(b) + '"' + (b === cur ? ' aria-pressed="true"' : '') + '>' +
-            esc(b) + '<small>' + d.b[b].length + ' विद्यालय</small></button>';
+        '<h1>आप किस विद्यालय में वीडियो चला रहे हैं?</h1>' +
+        '<p class="notice">कृपया <b>अपना सही विद्यालय</b> चुनें। इस स्क्रीन पर चलाया गया हर वीडियो, कब चला और कितनी देर चला, ' +
+          'इसी विद्यालय के नाम दर्ज होगा।</p>' +
+        '<div id="chosen"></div>' +
+        '<h2 id="findHead">' + (chosen ? 'दूसरा विद्यालय खोजें' : 'अपना विद्यालय खोजें') + '</h2>' +
+        '<input class="search" id="q" type="search" placeholder="विद्यालय का नाम (English में) या UDISE कोड लिखें" autocomplete="off">' +
+        '<p class="muted small" id="blockHint">या ब्लॉक चुनें:</p>' +
+        '<div class="picks blocks" id="blocks">' + blocks.map(function (b) {
+          return '<button class="pick" data-b="' + esc(b) + '" aria-pressed="false">' + esc(b) +
+            '<small>' + d.b[b].length + ' विद्यालय</small></button>';
         }).join('') + '</div>' +
-        '<div id="schoolPick"></div>';
+        '<div class="picks schoolList" id="sl"></div>';
+      var q = v.querySelector('#q');
+      q.value = typed;   // a list refresh can arrive while the teacher is typing
+      q.addEventListener('input', function () { typed = q.value; fill(); });
+      v.querySelectorAll('#blocks .pick').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x.getAttribute('data-b') === block));
+      });
       v.querySelector('#blocks').addEventListener('click', function (e) {
         var btn = e.target.closest('.pick');
         if (!btn) return;
-        v.querySelectorAll('#blocks .pick').forEach(function (x) { x.setAttribute('aria-pressed', String(x === btn)); });
-        drawSchools(d, btn.getAttribute('data-b'));
+        var b = btn.getAttribute('data-b');
+        block = block === b ? '' : b;
+        v.querySelectorAll('#blocks .pick').forEach(function (x) {
+          x.setAttribute('aria-pressed', String(x.getAttribute('data-b') === block));
+        });
+        fill();
       });
-      if (cur) drawSchools(d, cur, true);
-    }
-    function drawSchools(d, block, quiet) {
-      var list = d.b[block];
-      var box = $('#schoolPick');
-      box.innerHTML = '<h2 style="margin-top:1.2rem">' + esc(block) + ': विद्यालय चुनें</h2>' +
-        '<input class="search" id="q" type="search" placeholder="विद्यालय का नाम या UDISE कोड लिखें" autocomplete="off">' +
-        '<div class="picks schoolList" id="sl"></div>';
-      var q = box.querySelector('#q');
-      function fill() {
-        var s = q.value.trim().toLowerCase();
-        var hits = list.filter(function (x) { return !s || x[1].toLowerCase().indexOf(s) >= 0 || x[0].indexOf(s) >= 0; });
-        box.querySelector('#sl').innerHTML = hits.slice(0, 300).map(function (x) {
-          return '<button class="pick" data-id="' + esc(x[0]) + '">' + esc(x[1]) + '<small>UDISE ' + esc(x[0]) + '</small></button>';
-        }).join('') || '<p class="muted">कोई विद्यालय नहीं मिला</p>';
-      }
-      q.addEventListener('input', fill);
-      box.querySelector('#sl').addEventListener('click', function (e) {
+      v.querySelector('#sl').addEventListener('click', function (e) {
         var btn = e.target.closest('.pick');
         if (!btn) return;
-        var id = btn.getAttribute('data-id');
-        var hit = list.filter(function (x) { return x[0] === id; })[0];
-        school = { id: id, name: hit[1], block: block };
-        set('school', school);
-        renderHeader();
-        toast('✓ ' + hit[1]);
-        location.hash = '#/';
-        route();
+        var hit = all.filter(function (x) { return x[0] === btn.getAttribute('data-id'); })[0];
+        chosen = { id: hit[0], name: hit[1], block: hit[2] };
+        drawChosen();
+        fill();
+        v.querySelector('#chosen').scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
+      drawChosen();
       fill();
-      if (!quiet) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    function drawChosen() {
+      var box = $('#chosen');
+      if (!chosen) { box.innerHTML = ''; return; }
+      var again = school && chosen.id === school.id;
+      box.innerHTML = '<div class="chosen">' +
+        '<small>' + (again ? 'पिछली बार यही विद्यालय चुना गया था' : 'आपने यह विद्यालय चुना है') + '</small>' +
+        '<div class="cn">' + esc(chosen.name) + '</div>' +
+        '<div class="cm">ब्लॉक ' + esc(chosen.block) + ' · UDISE ' + esc(chosen.id) + '</div>' +
+        '<button class="btn big" id="ok">✓ हाँ, यही मेरा विद्यालय है</button></div>';
+      box.querySelector('#ok').addEventListener('click', confirm);
+      $('#findHead').textContent = 'दूसरा विद्यालय खोजें';
+    }
+
+    function fill() {
+      var out = $('#sl');
+      var words = $('#q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      // Keep results right under the search box: the block grid hides while typing,
+      // and shrinks to the one chosen block (tap it again to go back).
+      $('#blocks').hidden = $('#blockHint').hidden = !!words.length && !block;
+      $('#blocks').classList.toggle('one', !!block);
+      $('#blockHint').textContent = block ? 'ब्लॉक (हटाने के लिए दबाएँ):' : 'या ब्लॉक चुनें:';
+      if (!words.length && !block) { out.innerHTML = ''; return; }
+      var hits = all.filter(function (x) {
+        if (block && x[2] !== block) return false;
+        return words.every(function (w) { return x[3].indexOf(w) >= 0; });
+      });
+      // Names that start with what was typed come first.
+      if (words.length) {
+        hits.sort(function (a, b) {
+          return (b[1].toLowerCase().indexOf(words[0]) === 0) - (a[1].toLowerCase().indexOf(words[0]) === 0);
+        });
+      }
+      var max = words.length ? 60 : 400;   // browsing a block shows all of it
+      out.innerHTML = hits.slice(0, max).map(function (x) {
+        return '<button class="pick" data-id="' + esc(x[0]) + '"' + (chosen && chosen.id === x[0] ? ' aria-pressed="true"' : '') + '>' +
+          esc(x[1]) + '<small>' + (block ? '' : esc(x[2]) + ' · ') + 'UDISE ' + esc(x[0]) + '</small></button>';
+      }).join('') +
+        (hits.length > max ? '<p class="muted">' + (hits.length - max) + ' और विद्यालय — नाम के कुछ और अक्षर लिखें</p>' : '') ||
+        '<p class="muted">कोई विद्यालय नहीं मिला। नाम English में लिखें, या UDISE कोड लिखें।</p>';
+    }
+
+    function confirm() {
+      school = chosen;
+      set('school', school);
+      confirmedOn = localDate(Date.now());
+      renderHeader();
+      toast('✓ ' + school.name);
+      if (location.hash === afterConfirm) route(); else location.hash = afterConfirm;
+    }
+
     draw(data);
     api({ a: 'schools', v: data ? data.v : '' }).then(function (r) {
       if (r.error) throw new Error(r.error);
       if (r.same) return;
       set('schools', r);
-      if (/^#?\/?(setup)?$/.test(location.hash) || location.hash === '#/setup') draw(r);
+      if (!confirmed() || location.hash === '#/setup') draw(r);
     }).catch(function () {
       if (!data) v.innerHTML = '<p class="muted center">इंटरनेट से जुड़ने के बाद पेज दोबारा खोलें।</p>';
     });
@@ -521,9 +586,9 @@
     if (r.error || r.same) return;
     boot = r;
     set('boot', r);
-    if (!/^#\/(p|setup)/.test(location.hash) && school) viewHome();
+    if (!/^#\/(p|setup)/.test(location.hash) && confirmed()) viewHome();
   }).catch(function () {
-    if (!boot && school) $('#view').innerHTML = '<p class="muted center">इंटरनेट से जुड़ने के बाद पेज दोबारा खोलें।</p>';
+    if (!boot && confirmed()) $('#view').innerHTML = '<p class="muted center">इंटरनेट से जुड़ने के बाद पेज दोबारा खोलें।</p>';
   });
   flush();
 
