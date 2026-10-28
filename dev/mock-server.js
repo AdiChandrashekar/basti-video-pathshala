@@ -63,6 +63,11 @@ http.createServer((req, res) => {
     const data = a === 'boot' ? BOOT : a === 'schools' ? SCHOOLS : a === 'pl' ? { id: url.searchParams.get('id'), v: VIDEOS } : { ok: true };
     return send(res, data.v && v === data.v ? { v, same: true } : data);
   }
+  // The committed config.js points at the live backend; keep local runs on the mock.
+  if (url.pathname === '/config.js') {
+    res.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' });
+    return res.end(fs.readFileSync(path.join(WEB, 'config.js'), 'utf8').replace(/api:\s*'[^']*'/, "api: '/mock'"));
+  }
   const file = path.join(WEB, url.pathname === '/' ? 'index.html' : path.normalize(url.pathname));
   if (!file.startsWith(WEB) || !fs.existsSync(file)) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });

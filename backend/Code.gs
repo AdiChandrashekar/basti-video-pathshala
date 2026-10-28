@@ -31,8 +31,8 @@ const DEFAULT_CONFIG = [
   ['INACTIVE_DAYS', '3', 'Inactive tab lists schools with no plays in this many days'],
 ];
 
-const BASTI_BLOCKS = ['Bahadurpur', 'Bankati', 'Basti Sadar', 'Dubauliya', 'Gaur', 'Harraiya',
-  'Kaptanganj', 'Kudaraha', 'Paras Rampur', 'Ramnagar', 'Rudhauli', 'Saltaua Gopalpur', 'Saughat', 'Vikramjot'];
+// Built from the NIPUN Plus school master by dev/build-schools.js.
+const SCHOOLS_CSV_URL = 'https://raw.githubusercontent.com/AdiChandrashekar/basti-video-pathshala/main/data/schools-basti.csv';
 
 /* ---------------- web endpoints ---------------- */
 
@@ -159,6 +159,7 @@ function onOpen() {
     .addItem('Update dashboard now', 'compact')
     .addItem('Refresh playlists from YouTube', 'refreshCatalog')
     .addItem('Publish edits to Schools / Playlists', 'bumpVersion')
+    .addItem('Reload school list from GitHub (replaces Schools tab)', 'loadSchools')
     .addSeparator()
     .addItem('First-time setup', 'setup')
     .addToUi();
@@ -174,6 +175,15 @@ function bumpVersion() {
   PropertiesService.getScriptProperties().setProperty('VER', String(Date.now()));
 }
 
+/** Publishes edits that onEdit misses (API writes, other scripts) by fingerprinting the two tabs. */
+function syncVersion_() {
+  const props = PropertiesService.getScriptProperties();
+  const h = hash_([values_(SH.SCHOOLS), values_(SH.PLAYLISTS)]);
+  if (props.getProperty('SRC_HASH') === h) return;
+  props.setProperty('SRC_HASH', h);
+  bumpVersion();
+}
+
 function setup() {
   const ss = SpreadsheetApp.getActive();
   ensureSheet_(SH.CONFIG, ['key', 'value', 'meaning'], function (sh) {
@@ -182,13 +192,8 @@ function setup() {
   });
   ensureSheet_(SH.SCHOOLS, ['udise', 'block', 'school_name'], function (sh) {
     sh.getRange('A:A').setNumberFormat('@');
-    const sample = [];
-    BASTI_BLOCKS.forEach(function (b, i) {
-      sample.push(['SAMPLE' + (i * 2 + 1), b, 'SAMPLE School A (' + b + ')']);
-      sample.push(['SAMPLE' + (i * 2 + 2), b, 'SAMPLE School B (' + b + ')']);
-    });
-    sh.getRange(2, 1, sample.length, 3).setValues(sample);
   });
+  if (sheet_(SH.SCHOOLS).getLastRow() < 2) loadSchools();
   ensureSheet_(SH.PLAYLISTS, PLAYLIST_HEADERS);
   ensureSheet_(SH.VIDEOS, ['playlist_id', 'position', 'video_id', 'title', 'duration_s']);
   // Text columns, so UDISE codes keep their leading 0 and dates stay as typed.
@@ -207,6 +212,18 @@ function setup() {
 
   refreshCatalog();
   compact();
+}
+
+/** Replaces the Schools tab with the list published in the repo. */
+function loadSchools() {
+  const csv = UrlFetchApp.fetch(SCHOOLS_CSV_URL).getContentText('UTF-8');
+  const rows = Utilities.parseCsv(csv).slice(1).filter(function (r) { return r[0] && r[1]; })
+    .map(function (r) { return [udise_(r[0]), r[1].trim(), r[2].trim()]; });
+  const sh = sheet_(SH.SCHOOLS);
+  sh.getRange('A:A').setNumberFormat('@');
+  writeAll_(SH.SCHOOLS, ['udise', 'block', 'school_name'], rows);
+  bumpVersion();
+  Logger.log('Loaded %s schools', rows.length);
 }
 
 function ensureSheet_(name, headers, init) {

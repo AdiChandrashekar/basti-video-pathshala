@@ -16,6 +16,7 @@ function compact() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return;
   try {
+    syncVersion_();
     const cfg = config_();
     const schools = schoolMap_();
     const names = nameMaps_();

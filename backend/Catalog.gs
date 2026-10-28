@@ -119,7 +119,7 @@ function defaults_(title, index) {
     sub = Number(m[1]);
   }
   // Classes 9-10 and promotional lists are outside basic schools' scope.
-  if (/brand ambassadors|exam playlist|^grade (9|10)\b/.test(t)) show = false;
+  if (/brand ambassadors|exam playlist|(grade|class) (9|10)\b/.test(t)) show = false;
   return { show: show, category: cat, order: (CAT_ORDER.indexOf(cat) + 1) * 1000 + sub };
 }
 
