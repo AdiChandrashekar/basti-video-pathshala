@@ -41,7 +41,7 @@ fs.readFileSync(path.join(__dirname, '..', 'data', 'schools-basti.csv'), 'utf8')
     (SCHOOLS.b[m[2]] = SCHOOLS.b[m[2]] || []).push([m[1], m[3].replace(/""/g, '"')]);
   });
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml',
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.webmanifest': 'application/manifest+json' };
 
 http.createServer((req, res) => {

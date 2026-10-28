@@ -109,7 +109,9 @@
   function route() {
     window.scrollTo(0, 0);
     var h = location.hash.replace(/^#\/?/, '').split('/');
-    if (!confirmed() || h[0] === 'setup') {
+    var picker = !confirmed() || h[0] === 'setup';
+    renderInstall(picker);
+    if (picker) {
       afterConfirm = h[0] === 'p' ? location.hash : '#/';
       return viewSetup();
     }
@@ -567,6 +569,66 @@
   window.addEventListener('online', flush);
   window.addEventListener('pagehide', beacon);
   document.addEventListener('visibilitychange', function () { if (document.hidden) beacon(); });
+
+  /* ---------- install as an app ----------
+   * Offered only on the start-up (school picker) screen, never during class.
+   * Chrome / Edge / Android hand us an install prompt; iPhones and iPads need
+   * Safari's "Add to Home Screen", so they get the steps instead.
+   */
+
+  var installEvt = null;
+  var onPicker = false;
+
+  function standalone() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  }
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function renderInstall(picker) {
+    if (picker !== undefined) onPicker = picker;
+    var el = $('#install');
+    var ios = !installEvt && isIOS();
+    if (!onPicker || standalone() || Date.now() < get('installSnooze', 0) || (!installEvt && !ios)) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.innerHTML = '<img src="icon-192.png" alt="">' +
+      '<div class="it"><b>इसे ऐप की तरह इंस्टॉल करें</b><span>' +
+      (ios ? 'Safari में नीचे Share बटन (⬆) दबाएँ, फिर <b>“Add to Home Screen”</b> चुनें।'
+        : 'फ़ोन, टैबलेट, कंप्यूटर या स्मार्ट बोर्ड की स्क्रीन पर आइकन से सीधे खुलेगा।') + '</span></div>' +
+      '<div class="ib">' + (ios ? '' : '<button class="btn" id="instGo">⬇ इंस्टॉल करें</button>') +
+      '<button class="btn ghost" id="instNo">अभी नहीं</button></div>';
+    el.querySelector('#instNo').onclick = function () {
+      set('installSnooze', Date.now() + 14 * 864e5);   // ask again in two weeks
+      renderInstall();
+    };
+    var go = el.querySelector('#instGo');
+    if (go) {
+      go.onclick = function () {
+        var evt = installEvt;
+        installEvt = null;   // the browser allows one prompt per event
+        evt.prompt();
+        evt.userChoice.then(function (c) {
+          if (c.outcome !== 'accepted') set('installSnooze', Date.now() + 14 * 864e5);
+          renderInstall();
+        });
+      };
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    installEvt = e;
+    renderInstall();
+  });
+  window.addEventListener('appinstalled', function () {
+    installEvt = null;
+    renderInstall();
+    toast('✓ ऐप इंस्टॉल हो गया');
+  });
 
   /* ---------- start ---------- */
 

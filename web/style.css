@@ -104,6 +104,15 @@ h2 { font-size: 1.35rem; margin: .2rem 0 .6rem; font-weight: 800; }
 .pick small { display: block; color: var(--muted); }
 .pick[aria-pressed="true"] { background: var(--ink); color: var(--marigold); }
 .pick[aria-pressed="true"] small { color: inherit; opacity: .85; }
+.install {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; background: var(--fill-4);
+  border: var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-sm);
+  margin: 1rem auto 0; padding: .7rem .9rem; width: calc(100% - 2rem); max-width: 1568px;
+}
+.install img { width: 2.6rem; height: 2.6rem; flex: none; }
+.install .it { flex: 1 1 14rem; display: flex; flex-direction: column; line-height: 1.3; }
+.install .ib { display: flex; gap: .6rem; flex-wrap: wrap; }
+.install .btn { min-height: 2.5rem; padding: .45rem 1rem; box-shadow: var(--shadow-sm); }
 .notice {
   background: var(--fill-1); border: var(--border); border-radius: var(--radius); padding: .75rem 1rem;
   margin: .4rem 0 1.1rem; box-shadow: var(--shadow-sm); max-width: 48rem;
