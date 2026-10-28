@@ -66,6 +66,11 @@ function compact() {
     }
 
     buildReports_(rows, cfg, schools);
+    PropertiesService.getScriptProperties().setProperty('COMPACT_OK', new Date().toISOString());
+  } catch (err) {
+    PropertiesService.getScriptProperties().setProperty('COMPACT_ERR',
+      new Date().toISOString() + ' ' + String(err && err.stack || err).slice(0, 2000));
+    throw err;
   } finally {
     lock.releaseLock();
   }

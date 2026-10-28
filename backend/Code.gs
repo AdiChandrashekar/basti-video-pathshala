@@ -43,6 +43,7 @@ function doGet(e) {
     if (p.a === 'boot') out = withVersion_(getBoot_(), p.v);
     else if (p.a === 'schools') out = withVersion_(getSchools_(), p.v);
     else if (p.a === 'pl') out = getPlaylist_(String(p.id || ''));
+    else if (p.a === 'status') out = status_();
     else out = { ok: true, service: 'video-pathshala' };
   } catch (err) {
     out = { error: String(err && err.message || err) };
@@ -170,6 +171,17 @@ function onOpen() {
 function onEdit(e) {
   const name = e && e.range && e.range.getSheet().getName();
   if (name === SH.SCHOOLS || name === SH.PLAYLISTS) bumpVersion();
+}
+
+/** Health check (?a=status): when the dashboard job last ran, its last error, and the timers. */
+function status_() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    compactOk: props.getProperty('COMPACT_OK') || '',
+    compactError: props.getProperty('COMPACT_ERR') || '',
+    logRows: Math.max(0, sheet_(SH.LOG).getLastRow() - 1),
+    triggers: ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }),
+  };
 }
 
 function bumpVersion() {
