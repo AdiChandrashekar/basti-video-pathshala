@@ -1,0 +1,9 @@
+{
+  "name": "वीडियो पाठशाला",
+  "short_name": "पाठशाला",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fff4dc",
+  "theme_color": "#ffc21a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

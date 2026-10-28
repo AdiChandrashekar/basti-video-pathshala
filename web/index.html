@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffc21a">
+  <title>वीडियो पाठशाला</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://i.ytimg.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Mukta:wght@400;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="bar">
+      <a class="brand" href="#/" id="brand">वीडियो पाठशाला</a>
+      <button class="school" id="schoolBtn" hidden></button>
+    </div>
+    <div class="today" id="today" hidden></div>
+  </header>
+
+  <section class="playerWrap" id="playerWrap" hidden>
+    <div class="player"><div id="yt"></div></div>
+    <div class="now">
+      <div class="nowTitle" id="nowTitle"></div>
+      <div class="nowBtns">
+        <button class="btn ghost" id="prevBtn" aria-label="पिछला वीडियो">⏮ पिछला</button>
+        <button class="btn ghost" id="nextBtn" aria-label="अगला वीडियो">अगला ⏭</button>
+        <button class="btn ghost" id="closeBtn" aria-label="वीडियो बंद करें">✕ बंद</button>
+      </div>
+    </div>
+    <div class="upnext" id="upnext" hidden></div>
+  </section>
+
+  <main id="view" class="view"><p class="muted center">लोड हो रहा है…</p></main>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
