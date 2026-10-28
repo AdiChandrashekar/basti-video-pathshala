@@ -65,9 +65,10 @@ function doPost(e) {
   const ids = [];
   list.forEach(function (s) {
     if (!s || !s.id) return;
-    // appendRow is atomic, so concurrent posts never overwrite each other.
-    sheet.appendRow([new Date(now), device, skew, str_(s.id, 40), str_(s.sc, 30), str_(s.v, 20),
-      str_(s.p, 40), num_(s.st, 0), num_(s.ls, 0), clamp_(s.w, 86400), clamp_(s.m, 86400),
+    // appendRow is atomic, so concurrent posts never overwrite each other. It also guesses types
+    // whatever the column format, so text gets a leading ' to keep codes like 0955… intact.
+    sheet.appendRow([new Date(now), "'" + device, skew, "'" + str_(s.id, 40), "'" + str_(s.sc, 30),
+      "'" + str_(s.v, 20), "'" + str_(s.p, 40), num_(s.st, 0), num_(s.ls, 0), clamp_(s.w, 86400), clamp_(s.m, 86400),
       clamp_(s.h, 86400), clamp_(s.mx, 86400), clamp_(s.du, 86400)]);
     ids.push(s.id);
   });
@@ -186,6 +187,7 @@ function syncVersion_() {
 
 function setup() {
   const ss = SpreadsheetApp.getActive();
+  ss.setSpreadsheetTimeZone('Asia/Kolkata');
   ensureSheet_(SH.CONFIG, ['key', 'value', 'meaning'], function (sh) {
     sh.getRange('B:B').setNumberFormat('@');
     sh.getRange(2, 1, DEFAULT_CONFIG.length, 3).setValues(DEFAULT_CONFIG);
